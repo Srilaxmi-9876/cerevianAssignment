@@ -3,6 +3,7 @@ import axios from 'axios'
 export interface TranslationResult {
   translatedText: string
   audioUrl: string
+  audioDataUrl?: string // Base64 data URL as fallback
 }
 
 export async function translateAndConvertToSpeech(

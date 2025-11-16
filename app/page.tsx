@@ -41,8 +41,10 @@ export default function Home() {
       )
       
       setTranslatedText(result.translatedText)
-      setAudioUrl(result.audioUrl)
+      // Use data URL if available (for Render compatibility), otherwise use file URL
+      setAudioUrl(result.audioDataUrl || result.audioUrl)
     } catch (err: any) {
+      console.error('Translation/TTS error:', err)
       setError(err.message || 'Failed to translate and generate audio')
     } finally {
       setIsProcessing(false)

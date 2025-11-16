@@ -17,17 +17,38 @@ export default function AudioPlayer({ audioUrl }: AudioPlayerProps) {
     if (!audio) return
 
     const updateTime = () => setCurrentTime(audio.currentTime)
-    const updateDuration = () => setDuration(audio.duration)
+    const updateDuration = () => {
+      if (!isNaN(audio.duration) && audio.duration > 0) {
+        setDuration(audio.duration)
+      }
+    }
     const handleEnded = () => setIsPlaying(false)
+    const handleError = (e: Event) => {
+      console.error('Audio playback error:', e)
+      // Try to reload if there's an error
+      audio.load()
+    }
+    const handleCanPlay = () => {
+      updateDuration()
+    }
 
     audio.addEventListener('timeupdate', updateTime)
     audio.addEventListener('loadedmetadata', updateDuration)
+    audio.addEventListener('durationchange', updateDuration)
+    audio.addEventListener('canplay', handleCanPlay)
     audio.addEventListener('ended', handleEnded)
+    audio.addEventListener('error', handleError)
+
+    // Force load the audio
+    audio.load()
 
     return () => {
       audio.removeEventListener('timeupdate', updateTime)
       audio.removeEventListener('loadedmetadata', updateDuration)
+      audio.removeEventListener('durationchange', updateDuration)
+      audio.removeEventListener('canplay', handleCanPlay)
       audio.removeEventListener('ended', handleEnded)
+      audio.removeEventListener('error', handleError)
     }
   }, [audioUrl])
 
@@ -60,12 +81,34 @@ export default function AudioPlayer({ audioUrl }: AudioPlayerProps) {
   }
 
   const handleDownload = () => {
-    const link = document.createElement('a')
-    link.href = audioUrl
-    link.download = `translated-audio-${Date.now()}.mp3`
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
+    try {
+      // If it's a data URL, convert it to blob for download
+      if (audioUrl.startsWith('data:')) {
+        const response = fetch(audioUrl)
+          .then(res => res.blob())
+          .then(blob => {
+            const url = window.URL.createObjectURL(blob)
+            const link = document.createElement('a')
+            link.href = url
+            link.download = `translated-audio-${Date.now()}.mp3`
+            document.body.appendChild(link)
+            link.click()
+            document.body.removeChild(link)
+            window.URL.revokeObjectURL(url)
+          })
+      } else {
+        // Regular URL download
+        const link = document.createElement('a')
+        link.href = audioUrl
+        link.download = `translated-audio-${Date.now()}.mp3`
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+      }
+    } catch (error) {
+      console.error('Download failed:', error)
+      alert('Download failed. Please try again.')
+    }
   }
 
   return (
